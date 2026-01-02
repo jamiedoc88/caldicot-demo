@@ -108,4 +108,54 @@ else:
                     st.image(img_link, use_container_width=True)
 
                 # RIGHT: CONTENT
-                with c2
+                with c2:
+                    st.markdown(f'<div class="event-title">{row["Event"]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="event-meta">📅 {row["Date"]}   •   🏷️ {row["Type"]}</div>', unsafe_allow_html=True)
+                    
+                    desc_text = str(row['Description'])
+                    short_desc = (desc_text[:200] + '...') if len(desc_text) > 200 else desc_text
+                    st.write(short_desc)
+                    
+                    with st.expander("📖 Read Full Details"):
+                        st.write(desc_text)
+                        st.markdown("---")
+                        maps_link = f"https://www.google.com/maps/search/?api=1&query={row['Lat']},{row['Lon']}"
+                        st.markdown(f"**📍 Location:** [Get Directions]({maps_link})")
+
+                    # --- FIX: SIMPLIFIED HTML GENERATION ---
+                    share_text = urllib.parse.quote(f"Check out {row['Event']} in Caldicot! 🏰")
+                    share_url = urllib.parse.quote("https://caldicottownteam.co.uk") 
+                    
+                    # We use simple string addition instead of triple quotes to avoid indentation errors
+                    html_block = '<div style="margin-top: 10px;">'
+                    html_block += f'<a href="https://www.facebook.com/sharer/sharer.php?u={share_url}" target="_blank" class="share-btn fb">Facebook</a>'
+                    html_block += f'<a href="https://api.whatsapp.com/send?text={share_text}%20{share_url}" target="_blank" class="share-btn wa">WhatsApp</a>'
+                    html_block += f'<a href="https://twitter.com/intent/tweet?text={share_text}&url={share_url}" target="_blank" class="share-btn tw">X / Twitter</a>'
+                    html_block += '</div>'
+                    
+                    st.markdown(html_block, unsafe_allow_html=True)
+                
+                st.divider()
+
+    # --- TAB 2: THE MAP ---
+    with tab2:
+        st.info("📍 Click any pin for details.")
+        m = folium.Map(location=[51.5923, -2.7505], zoom_start=14)
+        
+        for index, row in df.iterrows():
+            popup_html = f"""
+            <div style="width:180px; font-family:sans-serif;">
+                <img src="{CALDICOT_LOGO}" width="50px" style="margin-bottom:5px;"><br>
+                <b>{row['Event']}</b><br>
+                <span style="color:gray;">{row['Date']}</span>
+            </div>
+            """
+            
+            folium.Marker(
+                [row['Lat'], row['Lon']],
+                popup=folium.Popup(popup_html, max_width=200),
+                tooltip=row['Event'],
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            
+        st_folium(m, width=1200, height=500)
