@@ -3,76 +3,96 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 
-# --- PAGE CONFIG ---
+# --- CONFIG ---
 st.set_page_config(page_title="Caldicot Town Hub", layout="wide")
 
-# --- CUSTOMER DATABASE LINK ---
-# PASTE YOUR GOOGLE SHEET CSV LINK INSIDE THE QUOTES BELOW:
-SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR9123Uwb863QUp-7O_35WzfRQdDsuXD29UIQFFhnvNLgWIpN2nyOdiHpbf4tK09-KPFntrdgX-K7LE/pub?gid=0&single=true&output=csv"
+# --- CUSTOM CSS FOR "CARDS" ---
+st.markdown("""
+<style>
+    .event-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .event-title {
+        color: #2E86C1;
+        font-size: 20px;
+        font-weight: bold;
+    }
+    .event-date {
+        color: #555;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# --- CACHED DATA LOADER ---
-# ttl=10 means the app checks for new spreadsheet rows every 10 seconds
+# ⚠️ PASTE YOUR SHEET LINK HERE AGAIN
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/......YOUR_LINK_HERE..../pub?gid=0&single=true&output=csv"
+
 @st.cache_data(ttl=10)
 def load_data():
     try:
-        # Read the CSV from the URL
         df = pd.read_csv(SHEET_URL)
-        # Clean whitespace from column names just in case
         df.columns = df.columns.str.strip()
+        # Handle empty image columns by filling with a placeholder
+        if 'Image_URL' not in df.columns: df['Image_URL'] = "https://via.placeholder.com/300"
+        df['Image_URL'] = df['Image_URL'].fillna("https://via.placeholder.com/300")
         return df
-    except Exception:
+    except:
         return pd.DataFrame()
 
 df = load_data()
 
-# --- APP INTERFACE ---
-# The "Sales Pitch" Info Box
-st.info("""
-ℹ️ **Prototype Demo for Caldicot Town Team**
-This tool demonstrates a new way to manage your website. 
-Instead of logging into WordPress, your team simply adds events to a secure Spreadsheet, 
-and this map updates automatically.
-""")
-
 st.title("🏰 Caldicot Town Hub")
 
 if df.empty:
-    st.error("⚠️ Could not load data. Check your Google Sheet link in the code.")
+    st.error("Could not load data. Check your Google Sheet link.")
 else:
-    # --- TABS LAYOUT ---
-    tab1, tab2 = st.tabs(["🗺️ Interactive Map", "📅 Event List"])
+    tab1, tab2 = st.tabs(["🗺️ Interactive Map", "📰 Event Feed"])
 
-    # --- TAB 1: THE MAP ---
+    # --- TAB 1: MAP (Simple View) ---
     with tab1:
-        st.write("Explore upcoming events in the town centre.")
-        
-        # 1. Create Base Map centered on Caldicot
+        st.write("Click a pin to see details.")
         m = folium.Map(location=[51.5923, -2.7505], zoom_start=14)
-
-        # 2. Add Pins from the Spreadsheet
+        
         for index, row in df.iterrows():
-            # Color code the pins
-            color = "blue"
-            if "Market" in str(row['Type']): color = "orange"
-            if "Culture" in str(row['Type']): color = "purple"
-            if "Volunteer" in str(row['Type']): color = "green"
-
+            # Create a rich popup with image
+            popup_html = f"""
+            <div style="width:200px">
+                <b>{row['Event']}</b><br>
+                {row['Date']}<br>
+                <img src="{row['Image_URL']}" width="100%" style="margin-top:10px; border-radius:5px;">
+            </div>
+            """
+            
             folium.Marker(
                 [row['Lat'], row['Lon']],
-                popup=f"<b>{row['Event']}</b><br>{row['Date']}",
+                popup=folium.Popup(popup_html, max_width=250),
                 tooltip=row['Event'],
-                icon=folium.Icon(color=color, icon="info-sign")
+                icon=folium.Icon(color="blue", icon="info-sign")
             ).add_to(m)
-
-        # 3. Render the Map
+            
         st_folium(m, width=1200, height=500)
 
-    # --- TAB 2: THE LIST ---
+    # --- TAB 2: RICH EVENT FEED (Detailed View) ---
     with tab2:
         st.subheader("Upcoming Events")
-        # Show a clean table
-        st.dataframe(
-            df[['Date', 'Event', 'Type']], 
-            use_container_width=True, 
-            hide_index=True
-        )
+        
+        # Display events as "Cards" (Image + Text side by side)
+        for index, row in df.iterrows():
+            with st.container():
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    # Display the image
+                    st.image(row['Image_URL'], use_container_width=True)
+                
+                with col2:
+                    st.markdown(f'<div class="event-title">{row["Event"]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="event-date">📅 {row["Date"]} | {row["Type"]}</div>', unsafe_allow_html=True)
+                    st.write(row['Description']) # Full text description
+                
+                st.divider() # Line between events
