@@ -108,25 +108,4 @@ else:
                     st.image(img_link, use_container_width=True)
 
                 # RIGHT: CONTENT
-                with c2:
-                    st.markdown(f'<div class="event-title">{row["Event"]}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="event-meta">📅 {row["Date"]}   •   🏷️ {row["Type"]}</div>', unsafe_allow_html=True)
-                    
-                    desc_text = str(row['Description'])
-                    short_desc = (desc_text[:200] + '...') if len(desc_text) > 200 else desc_text
-                    st.write(short_desc)
-                    
-                    with st.expander("📖 Read Full Details"):
-                        st.write(desc_text)
-                        st.markdown("---")
-                        maps_link = f"https://www.google.com/maps/search/?api=1&query={row['Lat']},{row['Lon']}"
-                        st.markdown(f"**📍 Location:** [Get Directions]({maps_link})")
-
-                    # --- FIX: SAFER HTML GENERATION ---
-                    share_text = urllib.parse.quote(f"Check out {row['Event']} in Caldicot! 🏰")
-                    share_url = urllib.parse.quote("https://caldicottownteam.co.uk") 
-                    
-                    # We build the HTML string cleanly here to prevent Syntax Errors
-                    share_html = f"""
-                        <div style="margin-top: 10px;">
-                            <a href="https://www.facebook.com/sharer/sharer.php?u={share_url}"
+                with c2
